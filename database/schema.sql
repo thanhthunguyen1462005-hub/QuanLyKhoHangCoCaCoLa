@@ -477,6 +477,46 @@ VALUES
     (1, 1, 1, 1, 420, 418, 'Chênh lệch cân đối chiếu khi nhập nguyên liệu pha chế',
      'Điều chỉnh giảm tồn kho 2 Kg sau khi được Ban Giám đốc phê duyệt.');
 
+INSERT INTO `inventory_audits`
+    (`audit_code`, `warehouse_id`, `title`, `audit_date`, `created_by`, `verified_by`, `status`, `notes`)
+VALUES
+    ('KK-2026-11-02', 1, 'Kiểm kê lô đường tinh luyện LOT-SIRO-2026-111',
+     '2026-11-01', 4, 3, 'WAITING_DIRECTOR', 'Biên bản mẫu có chênh lệch giảm tồn.'),
+    ('KK-2026-11-03', 3, 'Kiểm kê CO₂ thực phẩm - kiểm tra đối chiếu số lượng',
+     '2026-11-01', 4, 3, 'WAITING_DIRECTOR', 'Biên bản mẫu không có chênh lệch tồn.'),
+    ('KK-2026-11-04', 6, 'Kiểm kê thành phẩm Coca-Cola chai PET',
+     '2026-11-01', 4, 3, 'WAITING_DIRECTOR', 'Biên bản mẫu có chênh lệch tăng tồn.');
+
+INSERT INTO `inventory_audit_items`
+    (`audit_id`, `product_id`, `lot_id`, `location_id`, `system_quantity`, `actual_quantity`,
+     `discrepancy_reason`, `recommended_action`)
+SELECT a.`id`, i.`product_id`, i.`lot_id`, i.`location_id`, i.`quantity`, i.`quantity` - 5,
+       'Chênh lệch khi đối chiếu bao nguyên liệu tại vị trí lưu trữ',
+       'Điều chỉnh giảm tồn 5 Kg sau khi được phê duyệt.'
+FROM `inventory_audits` a
+INNER JOIN `inventory` i ON i.`warehouse_id` = 1 AND i.`location_id` = 2 AND i.`product_id` = 1 AND i.`lot_id` = 2
+WHERE a.`audit_code` = 'KK-2026-11-02';
+
+INSERT INTO `inventory_audit_items`
+    (`audit_id`, `product_id`, `lot_id`, `location_id`, `system_quantity`, `actual_quantity`,
+     `discrepancy_reason`, `recommended_action`)
+SELECT a.`id`, i.`product_id`, i.`lot_id`, i.`location_id`, i.`quantity`, i.`quantity`,
+       'Đã kiểm đếm và đối chiếu, số lượng khớp với sổ sách',
+       'Không cần điều chỉnh tồn kho.'
+FROM `inventory_audits` a
+INNER JOIN `inventory` i ON i.`warehouse_id` = 3 AND i.`location_id` = 8 AND i.`product_id` = 3 AND i.`lot_id` = 4
+WHERE a.`audit_code` = 'KK-2026-11-03';
+
+INSERT INTO `inventory_audit_items`
+    (`audit_id`, `product_id`, `lot_id`, `location_id`, `system_quantity`, `actual_quantity`,
+     `discrepancy_reason`, `recommended_action`)
+SELECT a.`id`, i.`product_id`, i.`lot_id`, i.`location_id`, i.`quantity`, i.`quantity` + 2,
+       'Phát hiện thêm 2 thùng tại khu vực chờ xuất, chưa được ghi nhận vào sổ sách',
+       'Điều chỉnh tăng tồn 2 thùng sau khi được phê duyệt.'
+FROM `inventory_audits` a
+INNER JOIN `inventory` i ON i.`warehouse_id` = 6 AND i.`location_id` = 4 AND i.`product_id` = 5 AND i.`lot_id` = 6
+WHERE a.`audit_code` = 'KK-2026-11-04';
+
 CREATE TABLE `in_app_notifications` (
     `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
     `user_id` INT NOT NULL,

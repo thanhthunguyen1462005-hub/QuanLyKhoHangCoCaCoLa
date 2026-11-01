@@ -35,7 +35,9 @@ c:\xampp\htdocs\QuanLyKhoHang\
 │   ├── receipts/                # FR-06, FR-08: Quản lý nhập kho (liên kết PO & QA/QC kiểm định)
 │   ├── issues/                  # FR-07, FR-09: Quản lý xuất kho (tự động gợi ý FEFO/FIFO, chặn xuất âm)
 │   ├── inventory/               # FR-12, FR-13, FR-14: Tra cứu tồn kho tức thời, cảnh báo Min/Max/Date
-│   ├── audits/                  # FR-15: Kiểm kê & cân bằng kho (cần Ban Giám Đốc phê duyệt)
+│   ├── audits/                  # FR-15: Phê duyệt biên bản kiểm kê
+│   ├── reports/                 # FR-17: Báo cáo quản trị từ số liệu database
+│   ├── audit_logs/              # FR-18: Tra cứu nhật ký thao tác hệ thống
 │   └── scanner/                 # NFR-10: Quét mã Barcode / QR Code bằng máy quét hoặc Camera
 ├── index.php                    # Trang chủ công khai; chuyển tới dashboard khi đã đăng nhập
 └── README.md                    # Tài liệu hướng dẫn phân công và phát triển
@@ -87,7 +89,7 @@ c:\xampp\htdocs\QuanLyKhoHang\
 
 ### Trạng thái phiên bản hiện tại
 
-Đây là **prototype giao diện và dữ liệu minh họa** cho quy trình kho nước giải khát. Đăng nhập và kiểm tra quyền theo vai trò đã được áp dụng. Quy trình phê duyệt/từ chối biên bản kiểm kê lưu trạng thái, lịch sử và điều chỉnh tồn kho trong MySQL; các trang nhập/xuất, dashboard, bộ lọc tồn kho và quét mã vẫn minh họa luồng, chưa lưu giao dịch. Không dùng số liệu mẫu cho vận hành thực tế.
+Đây là **prototype** cho quy trình kho nước giải khát. Đăng nhập, phân quyền, danh mục kho, tra cứu tồn kho, phê duyệt biên bản kiểm kê, dashboard Ban Giám đốc, báo cáo quản trị và tra cứu nhật ký sử dụng dữ liệu MySQL. Báo cáo theo kỳ tổng hợp chứng từ đã hoàn tất có trong database, nhóm lượng nhập/xuất theo SKU và đơn vị; giá trị nhập lấy từ đơn giá dòng phiếu, giá trị xuất chỉ là ước tính theo giá vốn hiện tại. Điều chuyển mới có bảng đầu phiếu, chưa có bảng dòng hàng để tổng hợp số lượng. Các biểu mẫu nhập/xuất và quét mã vẫn chưa lưu giao dịch kho; dashboard của các vai trò ngoài Ban Giám đốc vẫn có dữ liệu minh họa. Không dùng dữ liệu mẫu cho vận hành thực tế.
 
 ---
 
@@ -96,9 +98,10 @@ c:\xampp\htdocs\QuanLyKhoHang\
 1. Khởi động **Apache** và **MySQL** trên **XAMPP Control Panel**.
 2. Mở trình duyệt truy cập: `http://localhost/phpmyadmin/`.
 3. Nhấp vào tab **Import** (Nhập) &rarr; Chọn file `c:\xampp\htdocs\QuanLyKhoHang\database\schema.sql` &rarr; Nhấn **Go** (Thực hiện).
-   * Script sẽ tự động tạo database `quanlykhohang_db` với 11 kho, 9 tài khoản mẫu, danh mục hàng hóa, số lô, tồn kho và các bảng nghiệp vụ; đồng thời tạo một biên bản kiểm kê mẫu đang chờ duyệt.
+   * Script sẽ tự động tạo database `quanlykhohang_db` với 11 kho, 9 tài khoản mẫu, danh mục hàng hóa, số lô, tồn kho và các bảng nghiệp vụ; đồng thời tạo nhiều biên bản kiểm kê mẫu (chênh lệch giảm/tăng và không chênh lệch) đang chờ duyệt.
    * **Lưu ý:** schema.sql xóa và tạo lại các bảng mẫu. Hãy sao lưu dữ liệu trước khi import lại vào database đang sử dụng.
-   * Nếu database đã được cài đặt trước đó, hãy sao lưu rồi chạy file `database/migrations/20261101_audit_approval.sql` một lần trong phpMyAdmin để bổ sung cấu trúc phê duyệt và thông báo mà không xóa dữ liệu hiện có.
+   * Nếu database đã được cài đặt trước đó, hãy sao lưu rồi chạy file `database/migrations/20261101_audit_approval.sql` để bổ sung cấu trúc phê duyệt, thông báo và biên bản mẫu đầu tiên mà không xóa dữ liệu hiện có.
+   * Để thêm các biên bản mẫu dùng thử, chạy tiếp `database/migrations/20261101_audit_approval_samples.sql`. Có thể chạy lại migration mẫu; các mã biên bản đã tồn tại sẽ không bị thêm trùng.
 4. Mở trình duyệt truy cập website:
    ```
    http://localhost/QuanLyKhoHang/
@@ -127,9 +130,17 @@ Mật khẩu được xác thực bằng `password_verify`; tài khoản bị kh
 
 ### Phê duyệt biên bản kiểm kê
 
-Đăng nhập bằng tài khoản `giamdoc` (hoặc `admin`) để xem biên bản đã được Quản lý kho xác minh. Khi phê duyệt, hệ thống khóa biên bản và các dòng tồn liên quan trong transaction, kiểm tra tồn sổ sách có thay đổi không rồi mới cập nhật tồn theo số thực đếm; lỗi sẽ rollback toàn bộ giao dịch. Khi từ chối, cần nhập lý do; hệ thống lưu thông báo trong ứng dụng và gửi email đến người lập biên bản nếu tài khoản có email hợp lệ.
+Đăng nhập bằng tài khoản `giamdoc` (hoặc `admin`) và mở **Phê duyệt biên bản kiểm kê** để xem các biên bản đã được Quản lý kho xác minh. Dữ liệu mẫu có trường hợp chênh lệch giảm, chênh lệch tăng và không chênh lệch. Khi phê duyệt, hệ thống khóa biên bản và các dòng tồn liên quan trong transaction, kiểm tra tồn sổ sách có thay đổi không rồi mới cập nhật tồn theo số thực đếm; lỗi sẽ rollback toàn bộ giao dịch. Khi từ chối, cần nhập lý do; hệ thống lưu thông báo trong ứng dụng và gửi email đến người lập biên bản nếu tài khoản có email hợp lệ.
 
 Email phụ thuộc cấu hình SMTP của PHP/XAMPP. Nếu chưa cấu hình máy chủ SMTP, thao tác từ chối vẫn được lưu cùng thông báo trong ứng dụng và màn hình sẽ báo email chưa gửi được.
+
+### Báo cáo quản trị và nhật ký hệ thống
+
+Đăng nhập `giamdoc` hoặc `admin`. Dashboard Ban Giám đốc hiển thị KPI truy vấn trực tiếp từ database; biểu đồ và giao dịch minh họa cũ không hiển thị trong dashboard này. Trang **Hệ thống kho** và **Tra cứu tồn kho** đọc danh mục, vị trí, lô, số lượng, định mức và cảnh báo trực tiếp từ database; không dùng số liệu dựng sẵn. Quản lý kho có thể thêm/cập nhật danh mục kho; các vai trò được cấp quyền còn lại chỉ tra cứu. Tra cứu tồn kho lọc phía máy chủ theo từ khóa, kho, loại hàng và cảnh báo, có phân trang và xuất CSV theo bộ lọc hiện tại.
+
+- **Báo cáo quản trị (FR-17):** chọn khoảng thời gian tối đa 366 ngày để thống kê phiếu nhập/xuất/điều chuyển và quyết định kiểm kê đã hoàn tất; có lượng nhập/xuất theo SKU, giá trị nhập theo đơn giá phiếu và chi phí xuất ước tính theo giá vốn hiện tại. Các thẻ tồn kho, giá trị theo giá vốn, SKU dưới định mức, lô cận hạn và lô quá hạn còn tồn là ảnh chụp hiện tại. Biểu đồ đếm chứng từ; không cộng gộp lượng của các đơn vị hàng hóa khác nhau.
+- **Nhật ký hệ thống (FR-18):** lọc theo từ khóa, thao tác, phân hệ, người thực hiện và ngày; có phân trang. Hệ thống ghi nhận đăng nhập thành công/thất bại, đăng xuất, thêm/cập nhật kho và thao tác phê duyệt/từ chối biên bản. Các màn hình nhập/xuất dạng minh họa chưa lưu chứng từ nên chưa thể ghi nhật ký hay thống kê giao dịch từ các màn hình đó.
+- Các chức năng báo cáo và nhật ký chỉ cấp cho Ban Giám đốc và Quản trị hệ thống. Nhật ký hiện có từ trước khi cập nhật không được tự tạo lại; dữ liệu mẫu `INITIALIZE` và các quyết định kiểm kê đã ghi được hiển thị nếu có.
 
 ---
 
@@ -150,4 +161,4 @@ Mỗi bạn trong nhóm có thể phụ trách một nhóm FR độc lập:
 ## 6. Quy Ước Lập Trình Cho Nhóm
 * **Nguyên tắc FEFO / FIFO (FR-07):** Khi xuất kho, luôn thực hiện query `ORDER BY expiry_date ASC, created_at ASC` để ưu tiên lô hàng cận hạn nhất.
 * **Chống xuất âm (NFR-05):** Luôn dùng Transaction `BEGIN TRANSACTION` $\to$ `SELECT quantity FOR UPDATE` $\to$ kiểm tra nếu `quantity >= requested_qty` thì mới cho trừ kho $\to$ `COMMIT`.
-* **Ghi nhật ký hệ thống (FR-18):** Mọi hành động INSERT/UPDATE/DELETE/APPROVE đều chèn 1 dòng vào bảng `audit_logs`.
+* **Ghi nhật ký hệ thống (FR-18):** Với nghiệp vụ đã triển khai, ghi log cùng transaction cho thay đổi dữ liệu để tránh bản ghi bị thiếu hoặc không khớp. Các luồng demo chưa lưu dữ liệu chưa phát sinh log giao dịch.

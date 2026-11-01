@@ -32,7 +32,14 @@ $sidebarGroups = [
     [
         'title' => 'Kiểm kê',
         'links' => [
-            ['page' => 'audits', 'label' => 'Kiểm kê & cân bằng', 'icon' => 'fa-clipboard-check', 'url' => '/pages/audits/'],
+            ['page' => 'audits', 'label' => 'Phê duyệt biên bản kiểm kê', 'icon' => 'fa-clipboard-check', 'url' => '/pages/audits/'],
+        ],
+    ],
+    [
+        'title' => 'Quản trị',
+        'links' => [
+            ['page' => 'reports', 'label' => 'Báo cáo quản trị', 'icon' => 'fa-chart-line', 'url' => '/pages/reports/'],
+            ['page' => 'audit_logs', 'label' => 'Nhật ký hệ thống', 'icon' => 'fa-clock-rotate-left', 'url' => '/pages/audit_logs/'],
         ],
     ],
 ];

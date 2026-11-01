@@ -49,9 +49,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if ($account === false || !password_verify($password, $account['password'])) {
                     $errorMessage = 'Tên đăng nhập hoặc mật khẩu không chính xác.';
+                    try {
+                        $failedLoginLog = $pdo->prepare(
+                            "INSERT INTO audit_logs (user_id, action, module, record_id, ip_address, user_agent, details)
+                             VALUES (:user_id, 'LOGIN_FAILED', 'AUTHENTICATION', :record_id, :ip_address, :user_agent, :details)"
+                        );
+                        $failedLoginLog->execute([
+                            'user_id' => $account === false ? null : $account['id'],
+                            'record_id' => $account === false ? null : (string) $account['id'],
+                            'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null,
+                            'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? null,
+                            'details' => json_encode([
+                                'attempted_username' => $username,
+                                'reason' => $account === false ? 'ACCOUNT_NOT_FOUND_OR_INACTIVE' : 'INVALID_PASSWORD',
+                            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+                        ]);
+                    } catch (Throwable $logException) {
+                        error_log('Failed login attempt could not be recorded: ' . $logException->getMessage());
+                    }
                 } else {
+                    $pdo->beginTransaction();
                     $update = $pdo->prepare('UPDATE users SET last_login = NOW() WHERE id = :id');
                     $update->execute(['id' => $account['id']]);
+                    $loginLog = $pdo->prepare(
+                        "INSERT INTO audit_logs (user_id, action, module, record_id, ip_address, user_agent, details)
+                         VALUES (:user_id, 'LOGIN', 'AUTHENTICATION', :record_id, :ip_address, :user_agent, :details)"
+                    );
+                    $loginLog->execute([
+                        'user_id' => $account['id'],
+                        'record_id' => (string) $account['id'],
+                        'ip_address' => $_SERVER['REMOTE_ADDR'] ?? null,
+                        'user_agent' => $_SERVER['HTTP_USER_AGENT'] ?? null,
+                        'details' => 'Đăng nhập thành công.',
+                    ]);
+                    $pdo->commit();
 
                     session_regenerate_id(true);
                     unset($_SESSION['csrf_token']);
@@ -69,6 +100,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     exit;
                 }
             } catch (PDOException $exception) {
+                if ($pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
                 error_log('Login database operation failed: ' . $exception->getMessage());
                 $errorMessage = 'Không thể xác thực tài khoản lúc này. Vui lòng kiểm tra cấu hình cơ sở dữ liệu.';
             }

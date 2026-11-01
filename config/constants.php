@@ -71,6 +71,8 @@ const PAGE_ROLE_ACCESS = [
     'issues_raw' => [ROLE_MANAGER, ROLE_STAFF, ROLE_WORKSHOP, ROLE_PLANNING],
     'issues_finished' => [ROLE_MANAGER, ROLE_STAFF, ROLE_SALES],
     'audits' => [ROLE_DIRECTOR, ROLE_MANAGER, ROLE_STAFF],
+    'reports' => [ROLE_DIRECTOR],
+    'audit_logs' => [ROLE_DIRECTOR],
     'scanner' => [ROLE_MANAGER, ROLE_STAFF, ROLE_QC],
 ];
 

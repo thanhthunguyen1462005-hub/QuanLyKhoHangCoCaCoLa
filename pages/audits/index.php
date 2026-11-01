@@ -2,7 +2,7 @@
 /**
  * FR-15: QUẢN LÝ KIỂM KÊ & CÂN BẰNG TỒN KHO
  */
-$pageTitle = 'Quản Lý Kiểm Kê & Cân Bằng Kho (FR-15)';
+$pageTitle = 'Phê Duyệt Biên Bản Kiểm Kê (FR-15)';
 require_once __DIR__ . '/../../config/constants.php';
 require_once __DIR__ . '/../../config/database.php';
 requirePageAccess('audits');
@@ -407,7 +407,7 @@ $statusLabels = [
     <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3 bg-white p-3 rounded-3 border">
         <div>
             <h4 class="fw-bold mb-1 text-dark">
-                <i class="fa-solid fa-clipboard-check text-warning me-2"></i>Kiểm Kê & Cân Bằng Tồn Kho (FR-15)
+                <i class="fa-solid fa-clipboard-check text-warning me-2"></i>Phê Duyệt Biên Bản Kiểm Kê (FR-15)
             </h4>
             <div class="text-muted small">
                 Quản lý kho xác minh kết quả trước khi Ban Giám đốc phê duyệt điều chỉnh tồn.

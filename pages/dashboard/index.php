@@ -6,8 +6,62 @@
 
 $pageTitle = 'Tổng Quan Coca-Cola WMS';
 require_once __DIR__ . '/../../config/constants.php';
+require_once __DIR__ . '/../../config/database.php';
 requirePageAccess('dashboard');
 $currentUser = currentUser();
+$executiveDashboard = null;
+$executiveDashboardError = '';
+
+if ($currentUser['role'] === ROLE_DIRECTOR) {
+    $pdo = Database::getConnection();
+    if ($pdo === null) {
+        $executiveDashboardError = 'Không thể kết nối cơ sở dữ liệu để tải số liệu quản trị.';
+    } else {
+        try {
+            $executiveDashboard = $pdo->query(
+                "SELECT
+                    (SELECT COUNT(*) FROM warehouses WHERE status = 'ACTIVE') AS active_warehouses,
+                    (SELECT COUNT(*) FROM products WHERE status = 'ACTIVE') AS active_skus,
+                    (SELECT COUNT(*) FROM inventory WHERE quantity > 0) AS stock_positions,
+                    (SELECT COALESCE(SUM(i.quantity * p.cost_price), 0)
+                     FROM inventory i INNER JOIN products p ON p.id = i.product_id) AS inventory_value,
+                    (SELECT COUNT(*) FROM inventory_audits WHERE status = 'WAITING_DIRECTOR') AS pending_audits,
+                    (SELECT COUNT(*) FROM (
+                        SELECT p.id
+                        FROM products p
+                        LEFT JOIN inventory i ON i.product_id = p.id
+                        WHERE p.status = 'ACTIVE'
+                        GROUP BY p.id, p.min_stock
+                        HAVING COALESCE(SUM(i.quantity - i.reserved_quantity), 0) < p.min_stock
+                    ) low_stock_products) AS low_stock_skus,
+                    (SELECT COUNT(*) FROM (
+                        SELECT l.id
+                        FROM product_lots l
+                        INNER JOIN inventory i ON i.lot_id = l.id AND i.quantity > 0
+                        WHERE l.expiry_date BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 60 DAY)
+                        GROUP BY l.id
+                    ) expiring_lots) AS expiring_lots"
+            )->fetch();
+            $executiveDashboard['overdue_lots'] = $pdo->query(
+                'SELECT COUNT(DISTINCT l.id)
+                 FROM product_lots l
+                 INNER JOIN inventory i ON i.lot_id = l.id AND i.quantity > 0
+                 WHERE l.expiry_date < CURDATE()'
+            )->fetchColumn();
+            $executiveDashboard['recent_logs'] = $pdo->query(
+                'SELECT l.action, l.module, l.record_id, l.details, l.created_at, u.fullname
+                 FROM audit_logs l
+                 LEFT JOIN users u ON u.id = l.user_id
+                 ORDER BY l.created_at DESC, l.id DESC
+                 LIMIT 5'
+            )->fetchAll();
+        } catch (Throwable $exception) {
+            error_log('Executive dashboard query failed: ' . $exception->getMessage());
+            $executiveDashboard = null;
+            $executiveDashboardError = 'Không thể tải bảng điều khiển quản trị từ database.';
+        }
+    }
+}
 
 $roleDashboard = [
     ROLE_ADMIN => ['title' => 'Không gian quản trị hệ thống', 'description' => 'Theo dõi tổng quan vận hành và các phân hệ được cấp quyền quản trị.'],
@@ -20,12 +74,31 @@ $roleDashboard = [
     ROLE_PLANNING => ['title' => 'Không gian Lập kế hoạch', 'description' => 'Theo dõi tồn kho và các lô nguyên liệu phục vụ kế hoạch sản xuất.'],
     ROLE_SALES => ['title' => 'Không gian nghiệp vụ Bán hàng', 'description' => 'Tra cứu tồn thành phẩm và theo dõi thông tin xuất hàng phân phối.'],
 ];
+$executiveActionLabels = [
+    'INITIALIZE' => 'Khởi tạo',
+    'LOGIN' => 'Đăng nhập',
+    'LOGIN_FAILED' => 'Đăng nhập thất bại',
+    'LOGOUT' => 'Đăng xuất',
+    'APPROVE' => 'Phê duyệt',
+    'REJECT' => 'Từ chối',
+    'INSERT' => 'Thêm mới',
+    'UPDATE' => 'Cập nhật',
+    'DELETE' => 'Xóa',
+];
+$executiveModuleLabels = [
+    'SYSTEM' => 'Hệ thống',
+    'AUTHENTICATION' => 'Xác thực',
+    'WAREHOUSE' => 'Danh mục kho',
+    'INVENTORY_AUDIT' => 'Biên bản kiểm kê',
+];
 $dashboardActions = [
     ['page' => 'receipts_raw', 'label' => 'Nhập nguyên liệu (PO)', 'detail' => 'FR-06', 'icon' => 'fa-cart-flatbed', 'color' => 'primary', 'url' => '/pages/receipts/?type=raw'],
     ['page' => 'issues_raw', 'label' => 'Xuất nguyên liệu (FEFO)', 'detail' => 'FR-07', 'icon' => 'fa-truck-ramp-box', 'color' => 'warning', 'url' => '/pages/issues/?type=raw'],
     ['page' => 'receipts_finished', 'label' => 'Nhập thành phẩm', 'detail' => 'FR-08', 'icon' => 'fa-boxes-packing', 'color' => 'info', 'url' => '/pages/receipts/?type=finished'],
     ['page' => 'issues_finished', 'label' => 'Xuất thành phẩm', 'detail' => 'FR-09', 'icon' => 'fa-truck-fast', 'color' => 'success', 'url' => '/pages/issues/?type=finished'],
-    ['page' => 'audits', 'label' => 'Kiểm kê kho', 'detail' => 'FR-15', 'icon' => 'fa-clipboard-check', 'color' => 'danger', 'url' => '/pages/audits/'],
+    ['page' => 'audits', 'label' => 'Phê duyệt biên bản kiểm kê', 'detail' => 'FR-15', 'icon' => 'fa-clipboard-check', 'color' => 'danger', 'url' => '/pages/audits/'],
+    ['page' => 'reports', 'label' => 'Báo cáo quản trị', 'detail' => 'FR-17', 'icon' => 'fa-chart-line', 'color' => 'success', 'url' => '/pages/reports/'],
+    ['page' => 'audit_logs', 'label' => 'Nhật ký hệ thống', 'detail' => 'FR-18', 'icon' => 'fa-clock-rotate-left', 'color' => 'dark', 'url' => '/pages/audit_logs/'],
     ['page' => 'warehouses', 'label' => 'Danh mục kho', 'detail' => 'FR-02', 'icon' => 'fa-warehouse', 'color' => 'secondary', 'url' => '/pages/warehouses/'],
     ['page' => 'inventory', 'label' => 'Tra cứu tồn kho', 'detail' => 'FR-12, FR-14', 'icon' => 'fa-cubes', 'color' => 'primary', 'url' => '/pages/inventory/'],
     ['page' => 'scanner', 'label' => 'Quét Barcode/QR', 'detail' => 'NFR-10', 'icon' => 'fa-qrcode', 'color' => 'info', 'url' => '/pages/scanner/'],
@@ -159,6 +232,103 @@ include __DIR__ . '/../../includes/header.php';
 include __DIR__ . '/../../includes/sidebar.php';
 include __DIR__ . '/../../includes/navbar.php';
 ?>
+
+<?php if ($currentUser['role'] === ROLE_DIRECTOR): ?>
+    <div class="page-container">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 bg-white p-3 rounded-3 border mb-4">
+            <div>
+                <h4 class="fw-bold mb-1">Tổng quan Ban Giám đốc</h4>
+                <div class="small text-muted">
+                    Xin chào <?= htmlspecialchars($currentUser['fullname'], ENT_QUOTES, 'UTF-8') ?>.
+                    Số liệu được truy vấn trực tiếp từ database; không dùng KPI hoặc giao dịch minh họa.
+                </div>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="<?= BASE_URL ?>/pages/reports/" class="btn btn-primary btn-sm"><i class="fa-solid fa-chart-line me-1"></i>Báo cáo quản trị</a>
+                <a href="<?= BASE_URL ?>/pages/audit_logs/" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-clock-rotate-left me-1"></i>Nhật ký hệ thống</a>
+                <a href="<?= BASE_URL ?>/pages/audits/" class="btn btn-outline-warning btn-sm"><i class="fa-solid fa-clipboard-check me-1"></i>Biên bản chờ duyệt</a>
+                <a href="<?= BASE_URL ?>/pages/warehouses/" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-warehouse me-1"></i>Danh mục kho</a>
+                <a href="<?= BASE_URL ?>/pages/inventory/" class="btn btn-outline-primary btn-sm"><i class="fa-solid fa-cubes me-1"></i>Tra cứu tồn kho</a>
+            </div>
+        </div>
+
+        <?php if ($executiveDashboardError !== ''): ?>
+            <div class="alert alert-danger" role="alert"><?= htmlspecialchars($executiveDashboardError, ENT_QUOTES, 'UTF-8') ?></div>
+        <?php elseif ($executiveDashboard !== null): ?>
+            <?php
+            $executiveCards = [
+                ['label' => 'Kho đang hoạt động', 'value' => $executiveDashboard['active_warehouses'], 'icon' => 'fa-warehouse', 'color' => 'primary'],
+                ['label' => 'SKU đang hoạt động', 'value' => $executiveDashboard['active_skus'], 'icon' => 'fa-boxes-stacked', 'color' => 'success'],
+                ['label' => 'Vị trí có hàng', 'value' => $executiveDashboard['stock_positions'], 'icon' => 'fa-location-dot', 'color' => 'info'],
+                ['label' => 'Giá trị tồn theo giá vốn', 'value' => formatCurrency((float) $executiveDashboard['inventory_value']), 'icon' => 'fa-coins', 'color' => 'secondary'],
+                ['label' => 'Biên bản chờ duyệt', 'value' => $executiveDashboard['pending_audits'], 'icon' => 'fa-clipboard-check', 'color' => 'warning'],
+                ['label' => 'SKU dưới mức tối thiểu', 'value' => $executiveDashboard['low_stock_skus'], 'icon' => 'fa-triangle-exclamation', 'color' => 'danger'],
+                ['label' => 'Lô cận hạn trong 60 ngày', 'value' => $executiveDashboard['expiring_lots'], 'icon' => 'fa-hourglass-half', 'color' => 'warning'],
+                ['label' => 'Lô đã quá hạn còn tồn', 'value' => $executiveDashboard['overdue_lots'], 'icon' => 'fa-calendar-xmark', 'color' => 'danger'],
+            ];
+            ?>
+            <div class="row g-3 mb-4">
+                <?php foreach ($executiveCards as $card): ?>
+                    <div class="col-sm-6 col-xl-3">
+                        <div class="stat-card <?= $card['color'] ?> h-100">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="stat-label"><?= htmlspecialchars($card['label'], ENT_QUOTES, 'UTF-8') ?></div>
+                                    <div class="stat-value mt-2"><?= htmlspecialchars((string) $card['value'], ENT_QUOTES, 'UTF-8') ?></div>
+                                </div>
+                                <div class="icon-box"><i class="fa-solid <?= htmlspecialchars($card['icon'], ENT_QUOTES, 'UTF-8') ?>"></i></div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-xl-8">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <strong>Nhật ký thao tác gần đây</strong>
+                            <a href="<?= BASE_URL ?>/pages/audit_logs/" class="small text-decoration-none">Xem toàn bộ &rarr;</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead><tr><th>Thời gian</th><th>Người thực hiện</th><th>Thao tác</th><th>Phân hệ</th><th>Chi tiết</th></tr></thead>
+                                <tbody>
+                                    <?php foreach ($executiveDashboard['recent_logs'] as $log): ?>
+                                        <tr>
+                                            <td class="text-nowrap small"><?= htmlspecialchars(date('d/m/Y H:i', strtotime($log['created_at'])), ENT_QUOTES, 'UTF-8') ?></td>
+                                            <td><?= htmlspecialchars($log['fullname'] ?? 'Hệ thống', ENT_QUOTES, 'UTF-8') ?></td>
+                                            <td><span class="badge text-bg-secondary"><?= htmlspecialchars($executiveActionLabels[$log['action']] ?? $log['action'], ENT_QUOTES, 'UTF-8') ?></span></td>
+                                            <td><?= htmlspecialchars($executiveModuleLabels[$log['module']] ?? $log['module'], ENT_QUOTES, 'UTF-8') ?></td>
+                                            <td class="small"><?= htmlspecialchars($log['details'] ?? '—', ENT_QUOTES, 'UTF-8') ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                    <?php if ($executiveDashboard['recent_logs'] === []): ?>
+                                        <tr><td colspan="5" class="text-center text-muted py-4">Chưa có nhật ký hệ thống.</td></tr>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-4">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white fw-bold">Truy cập nhanh</div>
+                        <div class="list-group list-group-flush">
+                            <a href="<?= BASE_URL ?>/pages/reports/" class="list-group-item list-group-item-action"><i class="fa-solid fa-chart-line text-primary me-2"></i>Báo cáo quản trị</a>
+                            <a href="<?= BASE_URL ?>/pages/audit_logs/" class="list-group-item list-group-item-action"><i class="fa-solid fa-clock-rotate-left text-secondary me-2"></i>Tra cứu nhật ký hệ thống</a>
+                            <a href="<?= BASE_URL ?>/pages/audits/" class="list-group-item list-group-item-action"><i class="fa-solid fa-clipboard-check text-warning me-2"></i>Phê duyệt biên bản kiểm kê</a>
+                            <a href="<?= BASE_URL ?>/pages/warehouses/" class="list-group-item list-group-item-action"><i class="fa-solid fa-warehouse text-primary me-2"></i>Danh mục kho (chỉ xem)</a>
+                            <a href="<?= BASE_URL ?>/pages/inventory/" class="list-group-item list-group-item-action"><i class="fa-solid fa-cubes text-primary me-2"></i>Tra cứu tồn kho</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <?php endif; ?>
+    </div>
+    <?php include __DIR__ . '/../../includes/footer.php'; ?>
+    <?php exit; ?>
+<?php endif; ?>
 
 <div class="page-container">
     <?php if ($flashMessage !== null): ?>
