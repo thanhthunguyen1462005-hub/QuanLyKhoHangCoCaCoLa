@@ -87,7 +87,7 @@ c:\xampp\htdocs\QuanLyKhoHang\
 
 ### Trạng thái phiên bản hiện tại
 
-Đây là **prototype giao diện và dữ liệu minh họa** cho quy trình kho nước giải khát. Đăng nhập và kiểm tra quyền theo vai trò đã được áp dụng cho các phân hệ hiện có. Các trang nhập/xuất, kiểm kê, dashboard, bộ lọc tồn kho và quét mã vẫn minh họa luồng theo FR; biểu mẫu chưa lưu giao dịch vào MySQL, chưa thực thi phê duyệt hoặc cập nhật tồn kho. Không dùng số liệu mẫu cho vận hành thực tế.
+Đây là **prototype giao diện và dữ liệu minh họa** cho quy trình kho nước giải khát. Đăng nhập và kiểm tra quyền theo vai trò đã được áp dụng. Quy trình phê duyệt/từ chối biên bản kiểm kê lưu trạng thái, lịch sử và điều chỉnh tồn kho trong MySQL; các trang nhập/xuất, dashboard, bộ lọc tồn kho và quét mã vẫn minh họa luồng, chưa lưu giao dịch. Không dùng số liệu mẫu cho vận hành thực tế.
 
 ---
 
@@ -96,8 +96,9 @@ c:\xampp\htdocs\QuanLyKhoHang\
 1. Khởi động **Apache** và **MySQL** trên **XAMPP Control Panel**.
 2. Mở trình duyệt truy cập: `http://localhost/phpmyadmin/`.
 3. Nhấp vào tab **Import** (Nhập) &rarr; Chọn file `c:\xampp\htdocs\QuanLyKhoHang\database\schema.sql` &rarr; Nhấn **Go** (Thực hiện).
-   * Script sẽ tự động tạo database `quanlykhohang_db` với 11 kho, 9 tài khoản mẫu, danh mục hàng hóa, số lô, tồn kho và các bảng nghiệp vụ.
+   * Script sẽ tự động tạo database `quanlykhohang_db` với 11 kho, 9 tài khoản mẫu, danh mục hàng hóa, số lô, tồn kho và các bảng nghiệp vụ; đồng thời tạo một biên bản kiểm kê mẫu đang chờ duyệt.
    * **Lưu ý:** schema.sql xóa và tạo lại các bảng mẫu. Hãy sao lưu dữ liệu trước khi import lại vào database đang sử dụng.
+   * Nếu database đã được cài đặt trước đó, hãy sao lưu rồi chạy file `database/migrations/20261101_audit_approval.sql` một lần trong phpMyAdmin để bổ sung cấu trúc phê duyệt và thông báo mà không xóa dữ liệu hiện có.
 4. Mở trình duyệt truy cập website:
    ```
    http://localhost/QuanLyKhoHang/
@@ -122,7 +123,13 @@ Sau khi import `database/schema.sql`, có thể dùng các tài khoản demo sau
 | `kehoach` | Lập kế hoạch |
 | `banhang` | Bộ phận Bán hàng |
 
-Mật khẩu được xác thực bằng `password_verify`; tài khoản bị khóa không thể đăng nhập. Tài khoản và mật khẩu mẫu chỉ dành cho dữ liệu demo, cần thay đổi trước khi triển khai thật. Các màn hình nghiệp vụ hiện vẫn là giao diện minh họa, chưa ghi phiếu hay cập nhật tồn kho vào database.
+Mật khẩu được xác thực bằng `password_verify`; tài khoản bị khóa không thể đăng nhập. Tài khoản và mật khẩu mẫu chỉ dành cho dữ liệu demo, cần thay đổi trước khi triển khai thật.
+
+### Phê duyệt biên bản kiểm kê
+
+Đăng nhập bằng tài khoản `giamdoc` (hoặc `admin`) để xem biên bản đã được Quản lý kho xác minh. Khi phê duyệt, hệ thống khóa biên bản và các dòng tồn liên quan trong transaction, kiểm tra tồn sổ sách có thay đổi không rồi mới cập nhật tồn theo số thực đếm; lỗi sẽ rollback toàn bộ giao dịch. Khi từ chối, cần nhập lý do; hệ thống lưu thông báo trong ứng dụng và gửi email đến người lập biên bản nếu tài khoản có email hợp lệ.
+
+Email phụ thuộc cấu hình SMTP của PHP/XAMPP. Nếu chưa cấu hình máy chủ SMTP, thao tác từ chối vẫn được lưu cùng thông báo trong ứng dụng và màn hình sẽ báo email chưa gửi được.
 
 ---
 

@@ -8,6 +8,7 @@ USE `quanlykhohang_db`;
 
 SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS `audit_logs`;
+DROP TABLE IF EXISTS `in_app_notifications`;
 DROP TABLE IF EXISTS `inventory_audit_items`;
 DROP TABLE IF EXISTS `inventory_audits`;
 DROP TABLE IF EXISTS `stock_transfer_items`;
@@ -432,13 +433,18 @@ CREATE TABLE `inventory_audits` (
     `created_by` INT NOT NULL,
     `verified_by` INT NULL,           -- Quản lý kho xác minh kết quả
     `approved_by_director` INT NULL,  -- Ban Giám đốc phê duyệt
-    `status` ENUM('IN_PROGRESS', 'WAITING_MANAGER', 'WAITING_DIRECTOR', 'BALANCED', 'REJECTED') DEFAULT 'IN_PROGRESS',
+    `status` ENUM('IN_PROGRESS', 'WAITING_MANAGER', 'WAITING_DIRECTOR', 'APPROVED', 'BALANCED', 'REJECTED') DEFAULT 'IN_PROGRESS',
+    `approved_at` DATETIME NULL,
+    `rejected_by_director` INT NULL,
+    `rejected_at` DATETIME NULL,
+    `rejection_reason` TEXT NULL,
     `notes` TEXT NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (`warehouse_id`) REFERENCES `warehouses`(`id`),
     FOREIGN KEY (`created_by`) REFERENCES `users`(`id`),
     FOREIGN KEY (`verified_by`) REFERENCES `users`(`id`),
-    FOREIGN KEY (`approved_by_director`) REFERENCES `users`(`id`)
+    FOREIGN KEY (`approved_by_director`) REFERENCES `users`(`id`),
+    FOREIGN KEY (`rejected_by_director`) REFERENCES `users`(`id`)
 ) ENGINE=InnoDB;
 
 CREATE TABLE `inventory_audit_items` (
@@ -451,10 +457,36 @@ CREATE TABLE `inventory_audit_items` (
     `actual_quantity` INT NOT NULL, -- Tồn đếm thực tế
     `difference` INT GENERATED ALWAYS AS (`actual_quantity` - `system_quantity`) STORED,
     `discrepancy_reason` VARCHAR(255) NULL,
+    `recommended_action` TEXT NULL,
     FOREIGN KEY (`audit_id`) REFERENCES `inventory_audits`(`id`) ON DELETE CASCADE,
     FOREIGN KEY (`product_id`) REFERENCES `products`(`id`),
     FOREIGN KEY (`lot_id`) REFERENCES `product_lots`(`id`),
     FOREIGN KEY (`location_id`) REFERENCES `warehouse_locations`(`id`)
+) ENGINE=InnoDB;
+
+INSERT INTO `inventory_audits`
+    (`audit_code`, `warehouse_id`, `title`, `audit_date`, `created_by`, `verified_by`, `status`, `notes`)
+VALUES
+    ('KK-2026-11-01', 1, 'Biên Bản Kiểm Kê Kho Đường & Siro - Tháng 11/2026',
+     '2026-11-01', 4, 3, 'WAITING_DIRECTOR', 'Biên bản mẫu đã được Quản lý kho xác minh.');
+
+INSERT INTO `inventory_audit_items`
+    (`audit_id`, `product_id`, `lot_id`, `location_id`, `system_quantity`, `actual_quantity`,
+     `discrepancy_reason`, `recommended_action`)
+VALUES
+    (1, 1, 1, 1, 420, 418, 'Chênh lệch cân đối chiếu khi nhập nguyên liệu pha chế',
+     'Điều chỉnh giảm tồn kho 2 Kg sau khi được Ban Giám đốc phê duyệt.');
+
+CREATE TABLE `in_app_notifications` (
+    `id` BIGINT AUTO_INCREMENT PRIMARY KEY,
+    `user_id` INT NOT NULL,
+    `audit_id` INT NOT NULL,
+    `title` VARCHAR(200) NOT NULL,
+    `message` TEXT NOT NULL,
+    `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON DELETE CASCADE,
+    FOREIGN KEY (`audit_id`) REFERENCES `inventory_audits`(`id`) ON DELETE CASCADE,
+    INDEX `idx_notifications_user_created` (`user_id`, `created_at`)
 ) ENGINE=InnoDB;
 
 -- ------------------------------------------------------------------------------
