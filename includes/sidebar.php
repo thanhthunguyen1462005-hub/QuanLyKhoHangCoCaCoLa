@@ -29,6 +29,17 @@ $sidebarGroups = [
             ['page' => 'issues_finished', 'label' => 'Xuất thành phẩm', 'icon' => 'fa-truck-fast', 'url' => '/pages/issues/?type=finished'],
         ],
     ],
+        [
+        'title' => 'Kế hoạch sản xuất',
+        'links' => [
+            [
+                'page' => 'production_planning',
+                'label' => 'Lập kế hoạch sản xuất',
+                'icon' => 'fa-calendar-days',
+                'url' => '/pages/production_planning/',
+            ],
+        ],
+    ],
     [
         'title' => 'Kiểm kê',
         'links' => [
