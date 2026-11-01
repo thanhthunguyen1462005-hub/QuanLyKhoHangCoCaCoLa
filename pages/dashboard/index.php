@@ -90,6 +90,7 @@ $executiveModuleLabels = [
     'AUTHENTICATION' => 'Xác thực',
     'WAREHOUSE' => 'Danh mục kho',
     'INVENTORY_AUDIT' => 'Biên bản kiểm kê',
+    'PRODUCTION_PLANNING' => 'Kế hoạch sản xuất',
 ];
 $dashboardActions = [
     ['page' => 'receipts_raw', 'label' => 'Nhập nguyên liệu (PO)', 'detail' => 'FR-06', 'icon' => 'fa-cart-flatbed', 'color' => 'primary', 'url' => '/pages/receipts/?type=raw'],

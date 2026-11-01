@@ -89,7 +89,7 @@ c:\xampp\htdocs\QuanLyKhoHang\
 
 ### Trạng thái phiên bản hiện tại
 
-Đây là **prototype** cho quy trình kho nước giải khát. Đăng nhập, phân quyền, danh mục kho, tra cứu tồn kho, phê duyệt biên bản kiểm kê, dashboard Ban Giám đốc, báo cáo quản trị và tra cứu nhật ký sử dụng dữ liệu MySQL. Báo cáo theo kỳ tổng hợp chứng từ đã hoàn tất có trong database, nhóm lượng nhập/xuất theo SKU và đơn vị; giá trị nhập lấy từ đơn giá dòng phiếu, giá trị xuất chỉ là ước tính theo giá vốn hiện tại. Điều chuyển mới có bảng đầu phiếu, chưa có bảng dòng hàng để tổng hợp số lượng. Các biểu mẫu nhập/xuất và quét mã vẫn chưa lưu giao dịch kho; dashboard của các vai trò ngoài Ban Giám đốc vẫn có dữ liệu minh họa. Không dùng dữ liệu mẫu cho vận hành thực tế.
+Đây là **prototype** cho quy trình kho nước giải khát. Đăng nhập, phân quyền, danh mục kho, tra cứu tồn kho, phê duyệt biên bản kiểm kê, dashboard Ban Giám đốc, báo cáo quản trị, tra cứu nhật ký và kế hoạch sản xuất sử dụng dữ liệu MySQL. Kế hoạch sản xuất được chia sẻ qua database; chức năng này chưa có định mức nguyên vật liệu (BOM) nên không tính khả năng đáp ứng nguyên liệu. Báo cáo theo kỳ tổng hợp chứng từ đã hoàn tất có trong database, nhóm lượng nhập/xuất theo SKU và đơn vị; giá trị nhập lấy từ đơn giá dòng phiếu, giá trị xuất chỉ là ước tính theo giá vốn hiện tại. Điều chuyển mới có bảng đầu phiếu, chưa có bảng dòng hàng để tổng hợp số lượng. Các biểu mẫu nhập/xuất và quét mã vẫn chưa lưu giao dịch kho; dashboard của các vai trò ngoài Ban Giám đốc vẫn có dữ liệu minh họa. Không dùng dữ liệu mẫu cho vận hành thực tế.
 
 ---
 
@@ -127,6 +127,10 @@ Sau khi import `database/schema.sql`, có thể dùng các tài khoản demo sau
 | `banhang` | Bộ phận Bán hàng |
 
 Mật khẩu được xác thực bằng `password_verify`; tài khoản bị khóa không thể đăng nhập. Tài khoản và mật khẩu mẫu chỉ dành cho dữ liệu demo, cần thay đổi trước khi triển khai thật.
+
+### Kế hoạch sản xuất
+
+Nếu database đã được tạo trước đó, chạy `database/migrations/20261101_production_planning.sql` trong phpMyAdmin để tạo bảng kế hoạch mà không xóa dữ liệu hiện có. Đăng nhập bằng tài khoản `kehoach`, tạo kế hoạch; các tài khoản có quyền truy cập chức năng sẽ đọc danh sách kế hoạch từ cùng database. Với database cài mới, bảng `production_plans` đã có trong `database/schema.sql`. Không import lại `schema.sql` vào database đang sử dụng vì file này xóa và tạo lại các bảng.
 
 ### Phê duyệt biên bản kiểm kê
 

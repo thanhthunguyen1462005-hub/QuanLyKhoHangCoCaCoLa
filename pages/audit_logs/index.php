@@ -158,6 +158,7 @@ $moduleLabels = [
     'STOCK_ISSUE' => 'Phiếu xuất',
     'STOCK_TRANSFER' => 'Điều chuyển',
     'INVENTORY_AUDIT' => 'Biên bản kiểm kê',
+    'PRODUCTION_PLANNING' => 'Kế hoạch sản xuất',
 ];
 $queryParameters = $_GET;
 unset($queryParameters['page']);
