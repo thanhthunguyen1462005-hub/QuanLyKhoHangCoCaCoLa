@@ -5,7 +5,7 @@
  */
 
 // Đường dẫn Base URL (chạy trực tiếp trên XAMPP localhost/QuanLyKhoHang)
-define('BASE_URL', '/QuanLyKhoHang');
+define('BASE_URL', '/QuanLyKhoHang_Moi');
 define('APP_NAME', 'Coca-Cola WMS');
 define('APP_VERSION', '1.0.0');
 
@@ -33,15 +33,15 @@ define('ROLE_SALES', 'sales');             // Bán hàng (FR-09)
 
 // Tên hiển thị của các vai trò
 const ROLES_LIST = [
-    ROLE_ADMIN       => ['name' => 'Quản trị hệ thống', 'badge' => 'danger', 'icon' => 'fa-shield-halved'],
-    ROLE_DIRECTOR    => ['name' => 'Ban Giám đốc', 'badge' => 'primary', 'icon' => 'fa-user-tie'],
-    ROLE_MANAGER     => ['name' => 'Quản lý kho', 'badge' => 'warning', 'icon' => 'fa-user-gear'],
-    ROLE_STAFF       => ['name' => 'Nhân viên kho', 'badge' => 'info', 'icon' => 'fa-boxes-packing'],
-    ROLE_QC          => ['name' => 'QA/QC Chất lượng', 'badge' => 'success', 'icon' => 'fa-microscope'],
+    ROLE_ADMIN => ['name' => 'Quản trị hệ thống', 'badge' => 'danger', 'icon' => 'fa-shield-halved'],
+    ROLE_DIRECTOR => ['name' => 'Ban Giám đốc', 'badge' => 'primary', 'icon' => 'fa-user-tie'],
+    ROLE_MANAGER => ['name' => 'Quản lý kho', 'badge' => 'warning', 'icon' => 'fa-user-gear'],
+    ROLE_STAFF => ['name' => 'Nhân viên kho', 'badge' => 'info', 'icon' => 'fa-boxes-packing'],
+    ROLE_QC => ['name' => 'QA/QC Chất lượng', 'badge' => 'success', 'icon' => 'fa-microscope'],
     ROLE_PROCUREMENT => ['name' => 'Bộ phận Mua hàng', 'badge' => 'secondary', 'icon' => 'fa-cart-shopping'],
-    ROLE_WORKSHOP    => ['name' => 'Xưởng sản xuất', 'badge' => 'dark', 'icon' => 'fa-industry'],
-    ROLE_PLANNING    => ['name' => 'Lập kế hoạch', 'badge' => 'teal', 'icon' => 'fa-calendar-days'],
-    ROLE_SALES       => ['name' => 'Bộ phận Bán hàng', 'badge' => 'purple', 'icon' => 'fa-truck-fast'],
+    ROLE_WORKSHOP => ['name' => 'Xưởng sản xuất', 'badge' => 'dark', 'icon' => 'fa-industry'],
+    ROLE_PLANNING => ['name' => 'Lập kế hoạch', 'badge' => 'teal', 'icon' => 'fa-calendar-days'],
+    ROLE_SALES => ['name' => 'Bộ phận Bán hàng', 'badge' => 'purple', 'icon' => 'fa-truck-fast'],
 ];
 
 // Danh sách 11 Kho chuẩn (FR-02)
@@ -162,16 +162,21 @@ function consumeFlashMessage(): ?array
 }
 
 // Helper format tiền tệ & ngày tháng
-function formatCurrency($amount): string {
+function formatCurrency($amount): string
+{
     return number_format($amount, 0, ',', '.') . ' ₫';
 }
 
-function formatDate($dateStr): string {
-    if (!$dateStr) return '---';
+function formatDate($dateStr): string
+{
+    if (!$dateStr)
+        return '---';
     return date('d/m/Y', strtotime($dateStr));
 }
 
-function formatDateTime($dateStr): string {
-    if (!$dateStr) return '---';
+function formatDateTime($dateStr): string
+{
+    if (!$dateStr)
+        return '---';
     return date('d/m/Y H:i', strtotime($dateStr));
 }
