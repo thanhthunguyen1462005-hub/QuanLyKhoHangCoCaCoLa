@@ -40,6 +40,19 @@ $sidebarGroups = [
             ],
         ],
     ],
+    
+[
+    'title' => 'Nghiệp vụ xưởng',
+    'links' => [
+        [
+            'page' => 'material_requests',
+            'label' => 'Yêu cầu nhận nguyên liệu',
+            'icon' => 'fa-file-circle-plus',
+            'url' => '/pages/material_requests/',
+        ],
+    ],
+],
+
     [
         'title' => 'Kiểm kê',
         'links' => [
