@@ -201,7 +201,7 @@ include __DIR__ . '/../../includes/navbar.php';
                     <td>${formatDate(p.end_date)}</td>
                     <td>
                         <span class="badge bg-secondary">
-                            ${escapeHtml(p.status)}
+                            ${escapeHtml(p.status === 'PLANNED' ? 'Đã lập kế hoạch' : p.status)}
                         </span>
                     </td>
                     <td>
@@ -331,7 +331,7 @@ include __DIR__ . '/../../includes/navbar.php';
             <p><strong>Ngày kết thúc:</strong>
                 ${formatDate(plan.end_date)}</p>
             <p><strong>Trạng thái:</strong>
-                ${escapeHtml(plan.status)}</p>
+               ${escapeHtml(plan.status === 'PLANNED' ? 'Đã lập kế hoạch' : plan.status)}</p>
             <p><strong>Ghi chú:</strong>
                 ${escapeHtml(plan.note || 'Không có')}</p>
             <p class="text-muted small">
