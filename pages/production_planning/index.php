@@ -358,10 +358,6 @@ $('quantity').addEventListener('input', renderBom);
 $('planModal').addEventListener('show.bs.modal', () => {
     loadBom();
 });
-
-$('planModal').addEventListener('show.bs.modal', () => {
-    loadBom();
-});
     let plans = [];
 
     function render() {
@@ -485,41 +481,181 @@ $('planModal').addEventListener('show.bs.modal', () => {
         }
     });
 
-    $('plansBody').addEventListener('click', event => {
-        const button = event.target.closest('.view-plan');
+   $('plansBody').addEventListener('click', async event => {
+    const button = event.target.closest('.view-plan');
 
-        if (!button) return;
+    if (!button) return;
 
-        const plan = plans.find(
-            p => Number(p.id) === Number(button.dataset.id)
+    const plan = plans.find(
+        p => Number(p.id) === Number(button.dataset.id)
+    );
+
+    if (!plan) return;
+
+    // Hiển thị thông tin kế hoạch trước.
+    $('detailContent').dataset.planId = String(plan.id);
+    $('detailContent').innerHTML = `
+        <p><strong>Mã kế hoạch:</strong>
+            ${escapeHtml(plan.plan_code)}</p>
+
+        <p><strong>Sản phẩm:</strong>
+            ${escapeHtml(plan.product_name)}</p>
+
+        <p><strong>Số lượng:</strong>
+            ${formatNumber(plan.quantity)} thùng</p>
+
+        <p><strong>Ngày bắt đầu:</strong>
+            ${formatDate(plan.start_date)}</p>
+
+        <p><strong>Ngày kết thúc:</strong>
+            ${formatDate(plan.end_date)}</p>
+
+        <p><strong>Trạng thái:</strong>
+            ${escapeHtml(
+                plan.status === 'PLANNED'
+                    ? 'Đã lập kế hoạch'
+                    : plan.status
+            )}</p>
+
+        <p><strong>Ghi chú:</strong>
+            ${escapeHtml(plan.note || 'Không có')}</p>
+
+        <hr>
+
+        <h6 class="fw-bold">Nguyên liệu cần dùng</h6>
+
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered">
+                <thead>
+                    <tr>
+                        <th>Nguyên liệu</th>
+                        <th>Cần dùng</th>
+                        <th>Khả dụng</th>
+                        <th>Đánh giá</th>
+                    </tr>
+                </thead>
+                <tbody id="detailBomBody">
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">
+                            Đang tải nguyên liệu...
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="detailBomSummary" class="small"></div>
+
+        <p class="text-muted small mt-2">
+            Định mức minh họa cho đồ án.
+            Tồn kho được lấy tại thời điểm xem kế hoạch.
+        </p>
+    `;
+
+    bootstrap.Modal
+        .getOrCreateInstance($('detailModal'))
+        .show();
+
+    // Lấy nguyên liệu theo sản phẩm của kế hoạch.
+    try {
+        const response = await fetch(
+            `api.php?bom_product_id=${encodeURIComponent(plan.product_id)}`,
+            {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' }
+            }
         );
 
-        if (!plan) return;
+        const result = await response.json();
 
-        $('detailContent').innerHTML = `
-            <p><strong>Mã kế hoạch:</strong>
-                ${escapeHtml(plan.plan_code)}</p>
-            <p><strong>Sản phẩm:</strong>
-                ${escapeHtml(plan.product_name)}</p>
-            <p><strong>Số lượng:</strong>
-                ${formatNumber(plan.quantity)} thùng</p>
-            <p><strong>Ngày bắt đầu:</strong>
-                ${formatDate(plan.start_date)}</p>
-            <p><strong>Ngày kết thúc:</strong>
-                ${formatDate(plan.end_date)}</p>
-            <p><strong>Trạng thái:</strong>
-               ${escapeHtml(plan.status === 'PLANNED' ? 'Đã lập kế hoạch' : plan.status)}</p>
-            <p><strong>Ghi chú:</strong>
-                ${escapeHtml(plan.note || 'Không có')}</p>
-            <p class="text-muted small">
-                Chưa có định mức nguyên liệu để tính đủ hoặc thiếu.
-            </p>
+        if (!response.ok || !result.success) {
+            throw new Error(
+                result.message || 'Không thể tải nguyên liệu.'
+            );
+        }
+
+        const materials = Array.isArray(result.materials)
+            ? result.materials
+            : [];
+
+        // Nếu người dùng đã chuyển sang kế hoạch khác,
+        // không hiển thị kết quả của yêu cầu cũ.
+        if (
+            $('detailContent').querySelector('#detailBomBody') === null ||
+            $('detailContent').dataset.planId !== String(plan.id)
+        ) {
+            return;
+        }
+
+        if (materials.length === 0) {
+            $('detailBomBody').innerHTML = `
+                <tr>
+                    <td colspan="4" class="text-center text-warning">
+                        Sản phẩm chưa có định mức nguyên liệu.
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        let shortageCount = 0;
+
+        $('detailBomBody').innerHTML = materials.map(material => {
+            const required =
+                Number(material.quantity_per_unit) * Number(plan.quantity);
+
+            const available = Number(material.available);
+
+            const shortage = Math.max(0, required - available);
+            const enough = shortage <= 0.000001;
+
+            if (!enough) shortageCount++;
+
+            return `
+                <tr>
+                    <td>${escapeHtml(material.material_name)}</td>
+
+                    <td>
+                        ${formatNumber(required)}
+                        ${escapeHtml(material.unit)}
+                    </td>
+
+                    <td>
+                        ${formatNumber(available)}
+                        ${escapeHtml(material.unit)}
+                    </td>
+
+                    <td>
+                        <span class="badge ${enough ? 'bg-success' : 'bg-danger'}">
+                            ${enough
+                                ? 'Đủ'
+                                : 'Thiếu ' + formatNumber(shortage)}
+                        </span>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        $('detailBomSummary').innerHTML = shortageCount === 0
+            ? '<span class="text-success fw-bold">Đủ nguyên liệu theo tồn kho hiện tại.</span>'
+            : `<span class="text-danger fw-bold">
+                Có ${shortageCount} nguyên liệu bị thiếu.
+               </span>`;
+
+    } catch (error) {
+        if ($('detailContent').dataset.planId !== String(plan.id)) {
+            return;
+        }
+
+        $('detailBomBody').innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center text-danger">
+                    ${escapeHtml(error.message)}
+                </td>
+            </tr>
         `;
-
-        bootstrap.Modal
-            .getOrCreateInstance($('detailModal'))
-            .show();
-    });
+    }
+});
 
     loadPlans().catch(error => {
         $('plansBody').innerHTML = `
