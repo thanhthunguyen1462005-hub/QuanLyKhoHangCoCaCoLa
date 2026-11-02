@@ -37,6 +37,54 @@ try {
         ]);
     }
 
+    // Lấy định mức nguyên liệu và tồn kho khả dụng cho thành phẩm.
+if (
+    $_SERVER['REQUEST_METHOD'] === 'GET'
+    && isset($_GET['bom_product_id'])
+) {
+    $productId = filter_var(
+        $_GET['bom_product_id'],
+        FILTER_VALIDATE_INT,
+        ['options' => ['min_range' => 1]]
+    );
+
+    if (!$productId) {
+        sendJson(422, [
+            'success' => false,
+            'message' => 'Mã sản phẩm không hợp lệ.'
+        ]);
+    }
+
+    $stmt = $pdo->prepare("
+        SELECT
+            b.material_id,
+            m.name AS material_name,
+            m.unit,
+            b.quantity_per_unit,
+            COALESCE(stock.available, 0) AS available
+        FROM production_bom b
+        JOIN products m
+            ON m.id = b.material_id
+           AND m.type = 'RAW_MATERIAL'
+        LEFT JOIN (
+            SELECT
+                product_id,
+                SUM(quantity - reserved_quantity) AS available
+            FROM inventory
+            GROUP BY product_id
+        ) stock
+            ON stock.product_id = b.material_id
+        WHERE b.product_id = ?
+        ORDER BY b.material_id
+    ");
+
+    $stmt->execute([$productId]);
+
+    sendJson(200, [
+        'success' => true,
+        'materials' => $stmt->fetchAll()
+    ]);
+}
     // Đọc danh sách kế hoạch.
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $stmt = $pdo->query("

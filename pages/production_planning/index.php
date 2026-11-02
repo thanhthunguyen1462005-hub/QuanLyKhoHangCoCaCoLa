@@ -149,6 +149,36 @@ include __DIR__ . '/../../includes/navbar.php';
         <div class="col-md-6"><label class="form-label" for="quantity">Số lượng (thùng) *</label><input class="form-control" type="number" id="quantity" min="1" max="1000000" step="1" required></div>
         <div class="col-md-6"><label class="form-label" for="startDate">Ngày bắt đầu *</label><input class="form-control" type="date" id="startDate" required></div>
         <div class="col-md-6"><label class="form-label" for="endDate">Ngày kết thúc *</label><input class="form-control" type="date" id="endDate" required></div>
+        <div class="col-12">
+    <div class="border rounded p-3 bg-light">
+        <h6 class="fw-bold mb-2">Nguyên liệu cần dùng</h6>
+
+        <div class="table-responsive">
+            <table class="table table-sm table-bordered bg-white mb-2">
+                <thead>
+                    <tr>
+                        <th>Nguyên liệu</th>
+                        <th>Cần dùng</th>
+                        <th>Khả dụng</th>
+                        <th>Đánh giá</th>
+                    </tr>
+                </thead>
+                <tbody id="bomBody">
+                    <tr>
+                        <td colspan="4" class="text-muted text-center">
+                            Chọn sản phẩm và nhập số lượng để tính.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div id="bomSummary" class="small"></div>
+        <div class="text-muted small mt-2">
+            Định mức đang sử dụng là số liệu giả định phục vụ demo đồ án.
+        </div>
+    </div>
+</div>
         <div class="col-12"><label class="form-label" for="note">Ghi chú</label><textarea class="form-control" id="note" rows="2" maxlength="500"></textarea></div>
       </div><div id="formError" class="text-danger small mt-3" role="alert"></div></div>
       <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button><button type="submit" class="btn btn-primary">Lưu kế hoạch</button></div>
@@ -188,6 +218,150 @@ include __DIR__ . '/../../includes/navbar.php';
             : escapeHtml(date);
     };
 
+let bomMaterials = [];
+let bomLoadedProductId = null;
+let bomRequestId = 0;
+
+function renderBom() {
+    const productId = Number($('product').value);
+    const quantity = Number($('quantity').value);
+
+    if (!productId || !Number.isSafeInteger(quantity) || quantity < 1) {
+        $('bomBody').innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center text-muted">
+                    Chọn sản phẩm và nhập số lượng hợp lệ để tính.
+                </td>
+            </tr>
+        `;
+        $('bomSummary').textContent = '';
+        return;
+    }
+
+    if (bomLoadedProductId !== productId) {
+        $('bomBody').innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center text-muted">
+                    Đang tải định mức nguyên liệu...
+                </td>
+            </tr>
+        `;
+        $('bomSummary').textContent = '';
+        return;
+    }
+
+    if (!Array.isArray(bomMaterials) || bomMaterials.length === 0) {
+        $('bomBody').innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center text-warning">
+                    Sản phẩm chưa có định mức nguyên liệu.
+                </td>
+            </tr>
+        `;
+        $('bomSummary').textContent = '';
+        return;
+    }
+
+    let shortageCount = 0;
+
+    $('bomBody').innerHTML = bomMaterials.map(material => {
+        const required =
+            Number(material.quantity_per_unit) * quantity;
+
+        const available = Number(material.available);
+        const shortage = Math.max(0, required - available);
+        const enough = shortage <= 0.000001;
+
+        if (!enough) shortageCount++;
+
+        return `
+            <tr>
+                <td>${escapeHtml(material.material_name)}</td>
+                <td>
+                    ${formatNumber(required)}
+                    ${escapeHtml(material.unit)}
+                </td>
+                <td>
+                    ${formatNumber(available)}
+                    ${escapeHtml(material.unit)}
+                </td>
+                <td>
+                    <span class="badge ${enough ? 'bg-success' : 'bg-danger'}">
+                        ${enough ? 'Đủ' : 'Thiếu ' + formatNumber(shortage)}
+                    </span>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    $('bomSummary').innerHTML = shortageCount === 0
+        ? '<span class="text-success fw-bold">Đủ nguyên liệu theo tồn kho hiện tại.</span>'
+        : `<span class="text-danger fw-bold">
+            Có ${shortageCount} nguyên liệu bị thiếu.
+           </span>`;
+}
+
+async function loadBom() {
+    const productId = Number($('product').value);
+    const requestId = ++bomRequestId;
+
+    bomMaterials = [];
+    bomLoadedProductId = null;
+
+    if (!productId) {
+        renderBom();
+        return;
+    }
+
+    renderBom();
+
+    try {
+        const response = await fetch(
+            `api.php?bom_product_id=${encodeURIComponent(productId)}`,
+            {
+                credentials: 'same-origin',
+                headers: { 'Accept': 'application/json' }
+            }
+        );
+
+        const result = await response.json();
+
+        // Bỏ qua kết quả cũ nếu người dùng đã đổi sản phẩm.
+        if (requestId !== bomRequestId) return;
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || 'Không thể tải định mức.');
+        }
+
+        bomMaterials = Array.isArray(result.materials)
+    ? result.materials
+    : [];
+        bomLoadedProductId = productId;
+        renderBom();
+
+    } catch (error) {
+        if (requestId !== bomRequestId) return;
+
+        $('bomBody').innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center text-danger">
+                    ${escapeHtml(error.message)}
+                </td>
+            </tr>
+        `;
+        $('bomSummary').textContent = '';
+    }
+}
+
+$('product').addEventListener('change', loadBom);
+$('quantity').addEventListener('input', renderBom);
+$('planModal').addEventListener('show.bs.modal', () => {
+    loadBom();
+});
+
+$('planModal').addEventListener('show.bs.modal', () => {
+    loadBom();
+});
     let plans = [];
 
     function render() {
@@ -295,9 +469,12 @@ include __DIR__ . '/../../includes/navbar.php';
 
             await loadPlans();
 
-            $('planForm').reset();
+                $('planForm').reset();
+                bomMaterials = [];
+                bomLoadedProductId = null;
+                bomRequestId++;
 
-            bootstrap.Modal
+                bootstrap.Modal
                 .getOrCreateInstance($('planModal'))
                 .hide();
 
