@@ -228,12 +228,12 @@ body {
     padding-right: clamp(1rem, 2vw, 2rem) !important;
 }
 
-.page-container > .d-flex.bg-white {
+.page-container>.d-flex.bg-white {
     border-color: #e2e8f0 !important;
     box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
 }
 
-.page-container > .d-flex.bg-white h4 {
+.page-container>.d-flex.bg-white h4 {
     letter-spacing: -0.035em;
 }
 
@@ -278,10 +278,25 @@ body {
     font-size: 1.35rem;
 }
 
-.stat-card.primary .icon-box { background-color: #fff1f2; color: #e31837; }
-.stat-card.success .icon-box { background-color: #ecfdf5; color: #10b981; }
-.stat-card.warning .icon-box { background-color: #fffbeb; color: #f59e0b; }
-.stat-card.danger .icon-box  { background-color: #fef2f2; color: #ef4444; }
+.stat-card.primary .icon-box {
+    background-color: #fff1f2;
+    color: #e31837;
+}
+
+.stat-card.success .icon-box {
+    background-color: #ecfdf5;
+    color: #10b981;
+}
+
+.stat-card.warning .icon-box {
+    background-color: #fffbeb;
+    color: #f59e0b;
+}
+
+.stat-card.danger .icon-box {
+    background-color: #fef2f2;
+    color: #ef4444;
+}
 
 .stat-value {
     font-size: clamp(1.45rem, 2vw, 1.75rem);
@@ -411,13 +426,16 @@ body {
     width: 6px;
     height: 6px;
 }
+
 ::-webkit-scrollbar-track {
     background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
     background: #cbd5e1;
     border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
 }
@@ -431,6 +449,7 @@ body {
         width: 280px;
         min-width: 280px;
     }
+
     .app-sidebar.show {
         left: 0;
     }
@@ -452,7 +471,7 @@ body {
         gap: 0.5rem;
     }
 
-    .app-header > .d-flex {
+    .app-header>.d-flex {
         gap: 0.5rem !important;
     }
 
@@ -585,7 +604,7 @@ body {
     color: var(--primary-color);
 }
 
-.landing-hero-copy > p {
+.landing-hero-copy>p {
     max-width: 570px;
     color: #68758a;
     font-size: 1.06rem;
@@ -907,7 +926,7 @@ body {
     line-height: 1.1;
 }
 
-.auth-side-content > p {
+.auth-side-content>p {
     max-width: 430px;
     color: rgba(255, 255, 255, 0.75);
     line-height: 1.7;

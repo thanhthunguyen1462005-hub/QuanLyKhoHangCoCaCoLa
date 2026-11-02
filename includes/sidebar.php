@@ -29,7 +29,7 @@ $sidebarGroups = [
             ['page' => 'issues_finished', 'label' => 'Xuất thành phẩm', 'icon' => 'fa-truck-fast', 'url' => '/pages/issues/?type=finished'],
         ],
     ],
-        [
+    [
         'title' => 'Kế hoạch sản xuất',
         'links' => [
             [
@@ -37,6 +37,17 @@ $sidebarGroups = [
                 'label' => 'Lập kế hoạch sản xuất',
                 'icon' => 'fa-calendar-days',
                 'url' => '/pages/production_planning/',
+            ],
+        ],
+    ],
+    [
+        'title' => 'Nghiệp vụ Xưởng',
+        'links' => [
+            [
+                'page' => 'production_material_requests',
+                'label' => 'Lập phiếu nhận nguyên liệu',
+                'icon' => 'fa-file-circle-plus',
+                'url' => '/pages/production_material_requests/',
             ],
         ],
     ],

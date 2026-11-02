@@ -112,6 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 ?>
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -123,6 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css">
 </head>
+
 <body class="auth-page">
     <main class="auth-layout">
         <section class="auth-panel">
@@ -162,7 +164,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <div class="auth-demo-box">
                 <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-                    <div><strong><i class="fa-solid fa-flask me-2 text-primary"></i>Tài khoản dùng thử</strong><div class="small text-muted mt-1">Chọn vai trò để điền nhanh thông tin.</div></div>
+                    <div><strong><i class="fa-solid fa-flask me-2 text-primary"></i>Tài khoản dùng thử</strong>
+                        <div class="small text-muted mt-1">Chọn vai trò để điền nhanh thông tin.</div>
+                    </div>
                     <span class="badge text-bg-warning">Demo</span>
                 </div>
                 <div class="demo-account-list">
@@ -205,10 +209,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const password = document.getElementById('password');
             const visible = password.type === 'password';
             password.type = visible ? 'text' : 'password';
-            event.currentTarget.innerHTML = visible
-                ? '<i class="fa-regular fa-eye-slash"></i>'
-                : '<i class="fa-regular fa-eye"></i>';
+            event.currentTarget.innerHTML = visible ?
+                '<i class="fa-regular fa-eye-slash"></i>' :
+                '<i class="fa-regular fa-eye"></i>';
         });
     </script>
 </body>
+
 </html>

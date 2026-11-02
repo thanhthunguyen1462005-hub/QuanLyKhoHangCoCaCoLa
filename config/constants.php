@@ -1,11 +1,12 @@
 <?php
+
 /**
  * Định nghĩa Hằng số và Thiết lập Hệ thống WMS
  * Bao gồm 9 Vai trò (Actors), 11 Kho chuẩn FR-02, Trạng thái chứng từ FR-19
  */
 
 // Đường dẫn Base URL (chạy trực tiếp trên XAMPP localhost/QuanLyKhoHang)
-define('BASE_URL', '/QuanLyKhoHang');
+define('BASE_URL', '/QuanLyKhoHangCoCaCoLa');
 define('APP_NAME', 'Coca-Cola WMS');
 define('APP_VERSION', '1.0.0');
 
@@ -70,6 +71,7 @@ const PAGE_ROLE_ACCESS = [
     'receipts_finished' => [ROLE_MANAGER, ROLE_STAFF, ROLE_QC, ROLE_WORKSHOP],
     'issues_raw' => [ROLE_MANAGER, ROLE_STAFF, ROLE_WORKSHOP, ROLE_PLANNING],
     'production_planning' => [ROLE_PLANNING],
+    'production_material_requests' => [ROLE_PLANNING, ROLE_WORKSHOP, ROLE_STAFF, ROLE_MANAGER],
     'issues_finished' => [ROLE_MANAGER, ROLE_STAFF, ROLE_SALES],
     'audits' => [ROLE_DIRECTOR, ROLE_MANAGER, ROLE_STAFF],
     'reports' => [ROLE_DIRECTOR],
@@ -157,16 +159,19 @@ function consumeFlashMessage(): ?array
 }
 
 // Helper format tiền tệ & ngày tháng
-function formatCurrency($amount): string {
+function formatCurrency($amount): string
+{
     return number_format($amount, 0, ',', '.') . ' ₫';
 }
 
-function formatDate($dateStr): string {
+function formatDate($dateStr): string
+{
     if (!$dateStr) return '---';
     return date('d/m/Y', strtotime($dateStr));
 }
 
-function formatDateTime($dateStr): string {
+function formatDateTime($dateStr): string
+{
     if (!$dateStr) return '---';
     return date('d/m/Y H:i', strtotime($dateStr));
 }
