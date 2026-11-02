@@ -47,6 +47,17 @@ $sidebarGroups = [
         ],
     ],
     [
+        'title' => 'Kiểm định chất lượng',
+        'links' => [
+            [
+                'page' => 'qaqc',
+                'label' => 'Lập biên bản kiểm định chất lượng',
+                'icon' => 'fa-clipboard-check',
+                'url' => '/pages/qaqc/'
+            ],
+        ],
+    ],
+    [
         'title' => 'Quản trị',
         'links' => [
             ['page' => 'reports', 'label' => 'Báo cáo quản trị', 'icon' => 'fa-chart-line', 'url' => '/pages/reports/'],
